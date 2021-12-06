@@ -93,14 +93,12 @@ p {
     border-radius: 1rem;
     background: #ED7177;
     text-shadow: 0px 1px 0px #da686d, 0px -1px 0px #ff7a81;
-    box-shadow:  5px 5px 10px transparent, -5px -5px 10px transparent;
+    box-shadow:  5px 5px 10px #da686d, -5px -5px 10px #ff7a81;
     color: #3C2245;
     display: flex;
     opacity: 0;
-    animation: poop 1.2s linear 4s forwards;
-    -webkit-animation: poop 1.2s linear 4s forwards;
-    -webkit-transform: translateZ(0) scale(1.0, 1.0);
-    transform: translateZ(0);
+    animation: fadein 0.6s linear 4s forwards;
+    -webkit-animation: fadein 0.6s linear 4s forwards;
     cursor: pointer;
 }
 
@@ -109,28 +107,28 @@ p {
 }
 
 .genre {
-    max-width: 95%
+    width: 92%
 }
 
 .clicked {
     border-radius: 1rem;
     background: #ED7177;
-    box-shadow: inset 5px 5px 10px #d3656a, inset -5px -5px 10px #ff7d84 !important;
+    box-shadow: inset 5px 5px 10px #d3656a, inset -5px -5px 10px #ff7d84;
 }
 
 .play {
     justify-content: center;
     flex-direction: column;
-    width: 10%;
+    position: relative;
+    width: 8%;
+    margin-left: 2%;
 }
 
 .play-button {
-    position: absolute;
     box-sizing: border-box;
     border-style: solid;
     border-width: 0.6rem 1.2rem 0.6rem 1.2rem;
     border-color: transparent transparent transparent #3C2245;
-    right: 0;
 }
 
 .playing {
@@ -197,22 +195,6 @@ p {
     color: #63E0B9;
 }
 
-@keyframes poop {
-    from { opacity: 0; }
-    20% { opacity: 1; }
-    to { 
-        opacity: 1;
-        box-shadow:  5px 5px 10px #da686d, -5px -5px 10px #ff7a81;
-    }
-}
-@-webkit-keyframes poop {
-    from { opacity: 0; }
-    20% { opacity: 1; }
-    to { 
-        opacity: 1;
-        box-shadow:  5px 5px 10px #da686d, -5px -5px 10px #ff7a81;
-    }
-}
 @keyframes fadein {
     from { opacity: 0; }
     to { opacity: 1; }

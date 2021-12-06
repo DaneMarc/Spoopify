@@ -28,7 +28,8 @@ app.use(express.static('public'))
 const port = 1116;
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
-const redirect_uri = 'http://localhost:' + port + '/callback';
+//const redirect_uri = 'http://localhost:' + port + '/callback';
+const redirect_uri = 'https://spoopify.me/callback';
 let stateKey = 'spotify_auth_state';
 const mappa = new Map();
 
@@ -37,11 +38,10 @@ fs.createReadStream('genres.csv')
     .on('data', data => {
         mappa.set(data.genre, [csvtrim(data.opps), JSON.parse(data.weights), csvtrim(data.links)]);
     }).on('end', () => {
-        //console.log(mappa.get('italian metal')[0][1]);
         console.log('genres loaded');
     });
 
-app.listen(port, () => {
+app.listen(process.env.PORT || port, () => {
 	console.log(`Server listening on port ${port}`);
 });
 
