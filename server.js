@@ -1,17 +1,29 @@
 const express = require('express');
 const app = express();
+const path = require('path');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
+const helmet = require("helmet");
 const csv = require('csv-parser');
-const mustache = require('mustache');
 const fs = require('fs');
 const { default: axios } = require('axios');
 require('dotenv').config();
+app.set('views', path.join(__dirname,'views'));
+app.set('view engine', 'hbs');
 app.use(express.static('public'))
     .use(cookieParser())
     .use(express.urlencoded({extended: true}))
     .use(express.json())
-    .use(compression());
+    .use(compression())
+    .use(helmet({
+        contentSecurityPolicy: {
+            useDefaults: true,
+            directives: {
+                "img-src": ["'self'", "https://i.scdn.co/image/"],
+                "media-src": ["'self'", "https://p.scdn.co/mp3-preview/"]
+            }
+        }
+    }));
 
 const port = 1116;
 const client_id = process.env.CLIENT_ID;
@@ -43,7 +55,7 @@ app.get('/login', (req, res) => {
     res.redirect('https://accounts.spotify.com/authorize?' + new URLSearchParams({
         response_type: 'code',
         client_id: client_id,
-        scope: 'user-top-read playlist-modify-public playlist-modify-private',
+        scope: 'user-top-read',
         redirect_uri: redirect_uri,
         state: state
     }).toString());
@@ -78,17 +90,23 @@ app.get('/callback', (req, res) => {
                 };
                 const params = new URLSearchParams({'limit': numOfItems, time_range: 'long_term'}).toString();
 
-                Promise.all([axios.get('https://api.spotify.com/v1/me/top/tracks?' + params, headers), axios.get('https://api.spotify.com/v1/me/top/artists?' + params, headers)]).then(res => {
-                    const tracks = res[0].data.items;
-                    const artists = res[1].data.items;
+                Promise.all([axios.get('https://api.spotify.com/v1/me/top/tracks?' + params, headers), axios.get('https://api.spotify.com/v1/me/top/artists?' + params, headers)]).then(rex => {
+                    const tracks = rex[0].data.items;
+                    const artists = rex[1].data.items;
                     const trackMap = new Map(); // artist weights
                     const map = new Map(); // genre weights
                     const oo = new Map();
                     const promises = [];
+                    const imgs = [];
                     let temp, opps;
                     let t = 0, max = 0;
+                    let popSum = 0;
+                    let minPopTrack = 100, minPopTrackId;
+                    let minPopArtist = 100, minPopArtistId;
 
                     for (i = 0; i < numOfItems; i++) { // assigns weightage to genres of top artists
+                        if (artists[i].popularity < minPopArtist)
+                            minPopArtistId = artists[i];
                         oo.set(artists[i].id, artists[i].genres);
                         for (const genre of artists[i].genres) {
                             if (map.has(genre)) {
@@ -100,14 +118,19 @@ app.get('/callback', (req, res) => {
                     }
 
                     for (i = 0; i < numOfItems; i++) { //assigns weightage to artists of top tracks
-                        temp = tracks[i].artists;
-                        for (const artist of temp) {
+                        temp = tracks[i];
+                        if (i < 6)
+                            imgs.push(temp.album.images[1].url);
+                        popSum += temp.popularity;
+                        if (temp.popularity < minPopTrack)
+                            minPopTrackId = temp;
+                        for (const artist of temp.artists) {
                             if (oo.has(artist.id)) {
                                 for (const genre of oo.get(artist.id)) {
                                     if (map.has(genre)) {
-                                        t = map.get(genre) + (twice - i) / temp.length;
+                                        t = map.get(genre) + (twice - i) / temp.artists.length;
                                     } else {
-                                        t = (twice - i) / temp.length;
+                                        t = (twice - i) / temp.artists.length;
                                     }
                                     if (t > max)
                                         max = t;
@@ -115,9 +138,9 @@ app.get('/callback', (req, res) => {
                                 }
                             } else {
                                 if (trackMap.has(artist.id)) {
-                                    trackMap.set(artist.id, trackMap.get(artist.id) + (twice - i) / temp.length);
+                                    trackMap.set(artist.id, trackMap.get(artist.id) + (twice - i) / temp.artists.length);
                                 } else {
-                                    trackMap.set(artist.id, (twice - i) / temp.length);
+                                    trackMap.set(artist.id, (twice - i) / temp.artists.length);
                                 }
                             }
                         }
@@ -158,24 +181,34 @@ app.get('/callback', (req, res) => {
                                     t = temp[0][i];
                                     if (oo.has(t)) {
                                         opps = oo.get(t);
-                                        oo.set(t, [opps[0] + temp[1][i] * value, opps[1]]);
+                                        opps.weight += temp[1][i] * value;
                                     } else {
-                                        oo.set(t, [temp[1][i] * value, temp[2][i]]);
+                                        oo.set(t, { genre: t, weight: temp[1][i] * value, url: 'https://p.scdn.co/mp3-preview/' + temp[2][i] });
                                     }
                                 }
                             }
                         }
     
-                        opps = Array.from(oo.entries()).sort((a, b) => b[1][0] - a[1][0]).slice(0, 10);
-                        console.log(opps);
-                    }).catch(err => console.log(err));
-                }).catch(err => console.log(err));
-
-                res.sendFile(__dirname + '/yours.html');
+                        opps = Array.from(oo.values()).sort((a, b) => b.weight - a.weight).slice(0, 6);
+                        //console.log(opps);
+                        t = popSum / numOfItems;
+                        console.log(minPopTrackId);
+                        res.render('yours', { 
+                            loves: imgs, 
+                            hates: opps,
+                            score: t,
+                            desc: getBasic(t),
+                            trackUrl: minPopTrackId.album.images[1].url,
+                            trackName: minPopTrackId.name,
+                            artistUrl: minPopArtistId.images[2].url,
+                            artistName: minPopArtistId.name
+                        });
+                    }).catch(err => { console.log(err); res.send('error.html'); });
+                }).catch(err => { console.log(err); res.send('error.html'); });
             } else {
                 res.redirect('/#error=invalid_token');
             }
-        }).catch(err => console.log(err));
+        }).catch(err => { console.log(err); res.send('error.html'); });
     }
 });
 
@@ -194,4 +227,18 @@ const csvtrim = arr => {
     for (i = 0; i < arr.length; i++) 
         arr[i] = arr[i].slice(1,-1);
     return arr;
+}
+
+const getBasic = score => {
+    if (score >=  80) {
+        return "White girl";
+    } else if (score >= 60) {
+        return "Average (Taylor's Version)";
+    } else if (score >= 40) {
+        return "Average";
+    } else if (score >= 20) {
+        return "Indie kid";
+    } else {
+        return "Sorry for interrupting your grindset";
+    }
 }

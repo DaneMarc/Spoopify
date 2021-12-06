@@ -14,6 +14,9 @@
             <p>Super duper advanced AI shows you music you <del>love</del> hate</p>
             <a href="/login"><img src="spoop.png" alt="spotify logo">Log in with Spotify</a>
         </div>
+        <div id="footer">
+            <p>&#169; 2021 <a href="https://daneeee.com/me">Dane Bagaoisan</a></p>
+        </div>
     </body>
 </html>
 <style>
@@ -39,19 +42,24 @@
         margin: 10vh 0;
     }
 
-    p {
+    #content p {
         font-family: 'Outfit', serif;
         font-size: 1.8rem;
         margin-bottom: 15vh;
     }
 
     a {
-        font: 1.2rem 'Roboto', sans-serif;
+        font-family: 'Roboto', sans-serif;
+        text-decoration: none;
+        color: #3C2245;
+    }
+
+    #content a {
+        font-size: 1.2rem;
         background-color: #EA5D65;
         border-radius: 1rem;
         padding: 1rem 1rem;
         color: #3C2245;
-        text-decoration: none;
         -webkit-box-shadow: 0px 1px 0px #3C2245,
                 -1px 2px 0px #3C2245,
                 -2px 3px 0px #3C2245,
@@ -70,15 +78,35 @@
         margin-bottom: 0.2rem;
     }
 
-    a:hover {
+    #content a:hover {
         background-color: #1CD9A3;
     }
 
-    a:active {
+    #content a:active {
         background-color: #1CD9A3;
         box-shadow: 0px 1px 0px #2D1933,
                 -1px 2px 0px #2D1933;
         transform: translateY(1rem);
+    }
+
+    #footer {
+        position: fixed;
+        bottom: 0;
+        color: #8F254B;
+    }
+
+    #footer p {
+        font-family: 'Roboto', sans-serif;
+    }
+
+    #footer a {
+        text-decoration: underline;
+        color: #8F254B;
+        margin: 0 0.5rem;
+    }
+
+    #footer a:hover {
+        color: #1CD9A3;
     }
 
     @-webkit-keyframes gradient {

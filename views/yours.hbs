@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Spoopify</title>
+        <meta name="viewport" content="height=device-height, width=device-width, initial-scale=1">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Electrolize&family=Outfit:wght@500&display=swap" rel="stylesheet">
+    </head>
+    <!-- why hello there it's a bit messy here because I was in a rush but it works for now -->
+    <body>
+        <div id="first">
+            <div id="left">
+                <h2>You love...</h2>
+                <div id="loves">
+                    {{#each loves}}
+                    <img class="love" id="img{{@index}}" src={{this}} alt="image"/>
+                    {{/each}}
+                </div>
+            </div>
+            <div id="right">
+                <h2 id="yea">So you'll LOVE</h2>
+                <div id="buttons">
+                    {{#each hates}}
+                    <div data-id={{@index}} data-url={{url}} class="button">
+                        <div class="genre">{{genre}}</div>
+                        <div class="play"><div class="play-button"></div></div>
+                    </div>
+                    {{/each}}
+                </div>
+            </div>
+        </div>
+        <div id="second">
+            <div id="content">
+                <h2>How basic are you?</h2>
+                <h1>{{score}}%</h1>
+                <p>{{desc}}</p>
+                <div id="faves">
+                    <h2>Your favourite not-so-popular...</h2>
+                    <div id="idk">
+                        <div class="box" id="song">
+                            <h2>Song</h2>
+                            <div>
+                                <img src={{trackUrl}} alt="images" />
+                                <p>{{trackName}}</p> 
+                            </div>
+                        </div>
+                        <div class="box" id="artist">
+                            <h2>Artist</h2>
+                            <div>
+                                <img src={{artistUrl}} alt="images" />
+                                <p>{{artistName}}</p> 
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="footer">
+                    <p>&#169; 2021 <a href="https://daneeee.com/me">Dane Bagaoisan</a></p>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+<link rel="stylesheet" href="/css/yours.css">
+<script src="/js/yours.js"></script>
