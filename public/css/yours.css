@@ -150,12 +150,21 @@ p {
     margin: 0;
 }
 
+#second p {
+    font-size: 1.3rem;
+}
+
 #second h2 {
     margin: 2vh 0;
 }
 
+#faves h2 {
+    margin: 1.8vh 0;
+    font-size: 1.9rem;
+}
+
 .box img {
-    width: 40%;
+    width: 35%;
     height: auto;
     border-radius: 0.5rem;
     box-shadow: rgb(50 50 93 / 25%) 0px 2px 5px -1px, rgb(0 0 0 / 30%) 0px 1px 3px -1px;
@@ -166,7 +175,7 @@ p {
 }
 
 .box p {
-    margin-left: 5vw;
+    margin-left: 7vw;
 }
 
 #content {
