@@ -80,135 +80,140 @@ app.get('/callback', (req, res) => {
             }}
         ).then(body => {
             if (body.status === 200) {
-                let access_token = body.data.access_token//, refresh_token = body.data.refresh_token;
-                const numOfItems = 50;
-                const twice = numOfItems * 2;
+                let access_token = body.data.access_token
+                const limit = 50;
                 const headers = { headers: {
                     'Authorization': 'Bearer ' + access_token,
                     'Accept': 'application/json',
                     'Content-Type': 'application/json' }
                 };
-                const params = new URLSearchParams({'limit': numOfItems, time_range: 'long_term'}).toString();
+                const params = new URLSearchParams({'limit': limit, time_range: 'long_term'}).toString();
 
                 Promise.all([axios.get('https://api.spotify.com/v1/me/top/tracks?' + params, headers), axios.get('https://api.spotify.com/v1/me/top/artists?' + params, headers)]).then(rex => {
                     const tracks = rex[0].data.items;
                     const artists = rex[1].data.items;
-                    const trackMap = new Map(); // artist weights
-                    const map = new Map(); // genre weights
-                    const oo = new Map();
-                    const promises = [];
-                    const imgs = [];
-                    let temp, opps;
-                    let t = 0, max = 0;
-                    let popSum = 0;
-                    let minPopTrack = 100, minPopTrackId;
-                    let minPopArtist = 100, minPopArtistId;
+                    const numOfItems = tracks.length;
+                    const numOfArtists = artists.length;
+                    if (numOfItems > 0) {
+                        const twice = numOfItems * 2;
+                        const trackMap = new Map(); // artist weights
+                        const map = new Map(); // genre weights
+                        const oo = new Map();
+                        const promises = [];
+                        const imgs = [];
+                        let temp, opps;
+                        let t = 0, max = 0;
+                        let popSum = 0;
+                        let minPopTrack = 100, minPopTrackId;
+                        let minPopArtist = 100, minPopArtistId;
 
-                    for (i = 0; i < numOfItems; i++) { // assigns weightage to genres of top artists
-                        if (artists[i].popularity < minPopArtist)
-                            minPopArtistId = artists[i];
-                        oo.set(artists[i].id, artists[i].genres);
-                        for (const genre of artists[i].genres) {
-                            if (map.has(genre)) {
-                                map.set(genre, map.get(genre) + numOfItems - i);
-                            } else {
-                                map.set(genre, numOfItems - i);
-                            }
-                        }
-                    }
-
-                    for (i = 0; i < numOfItems; i++) { //assigns weightage to artists of top tracks
-                        temp = tracks[i];
-                        if (i < 6)
-                            imgs.push(temp.album.images[1].url);
-                        popSum += temp.popularity;
-                        if (temp.popularity < minPopTrack)
-                            minPopTrackId = temp;
-                        for (const artist of temp.artists) {
-                            if (oo.has(artist.id)) {
-                                for (const genre of oo.get(artist.id)) {
-                                    if (map.has(genre)) {
-                                        t = map.get(genre) + (twice - i) / temp.artists.length;
-                                    } else {
-                                        t = (twice - i) / temp.artists.length;
-                                    }
-                                    if (t > max)
-                                        max = t;
-                                    map.set(genre, t);
-                                }
-                            } else {
-                                if (trackMap.has(artist.id)) {
-                                    trackMap.set(artist.id, trackMap.get(artist.id) + (twice - i) / temp.artists.length);
+                        for (i = 0; i < numOfArtists; i++) { // assigns weightage to genres of top artists
+                            if (artists[i].popularity < minPopArtist)
+                                minPopArtistId = artists[i];
+                            oo.set(artists[i].id, artists[i].genres);
+                            for (const genre of artists[i].genres) {
+                                if (map.has(genre)) {
+                                    map.set(genre, map.get(genre) + numOfArtists - i);
                                 } else {
-                                    trackMap.set(artist.id, (twice - i) / temp.artists.length);
+                                    map.set(genre, numOfArtists - i);
                                 }
                             }
                         }
-                    }
-                    
-                    oo.clear();
 
-                    if (trackMap.size > 0) {
-                        t = 0;
-                        temp = Array.from(trackMap.keys());
-                        while (temp.length - t > numOfItems) {
-                            promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({'ids': temp.slice(t, t + numOfItems).join()}).toString(), headers));
-                            t += numOfItems;
-                        }
-                        promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({'ids': temp.slice(t, temp.length).join()}).toString(), headers));
-                    }
-
-                    Promise.all(promises).then(ress => { // gets data on all artists of top tracks and assigns weightage to genres
-                        for (const arr of ress) {
-                            for (const artist of arr.data.artists) {
-                                for (const genre of artist.genres) {
-                                    if (map.has(genre)) {
-                                        t = map.get(genre) + trackMap.get(artist.id);
-                                    } else {
-                                        t = trackMap.get(artist.id);
+                        for (i = 0; i < numOfItems; i++) { //assigns weightage to artists of top tracks
+                            temp = tracks[i];
+                            if (i < 6)
+                                imgs.push(temp.album.images[1].url);
+                            popSum += temp.popularity;
+                            if (temp.popularity < minPopTrack)
+                                minPopTrackId = temp;
+                            for (const artist of temp.artists) {
+                                if (oo.has(artist.id)) {
+                                    for (const genre of oo.get(artist.id)) {
+                                        if (map.has(genre)) {
+                                            t = map.get(genre) + (twice - i) / temp.artists.length;
+                                        } else {
+                                            t = (twice - i) / temp.artists.length;
+                                        }
+                                        if (t > max)
+                                            max = t;
+                                        map.set(genre, t);
                                     }
-                                    if (t > max)
-                                        max = t;
-                                    map.set(genre, t);
-                                }
-                            }
-                        }
-    
-                        for (const [key, value] of map.entries()) { // assigns weightage to dissimilar genres
-                            if (value * 160 >= max * 100) {
-                                temp = mappa.get(key);
-                                for (i = 0; i < temp[0].length; i++) {
-                                    t = temp[0][i];
-                                    if (oo.has(t)) {
-                                        opps = oo.get(t);
-                                        opps.weight += temp[1][i] * value;
+                                } else {
+                                    if (trackMap.has(artist.id)) {
+                                        trackMap.set(artist.id, trackMap.get(artist.id) + (twice - i) / temp.artists.length);
                                     } else {
-                                        oo.set(t, { genre: t, weight: temp[1][i] * value, url: 'https://p.scdn.co/mp3-preview/' + temp[2][i] });
+                                        trackMap.set(artist.id, (twice - i) / temp.artists.length);
                                     }
                                 }
                             }
                         }
-    
-                        opps = Array.from(oo.values()).sort((a, b) => b.weight - a.weight).slice(0, 6);
-                        //console.log(opps);
-                        t = popSum / numOfItems;
-                        console.log(minPopTrackId);
-                        res.render('yours', { 
-                            loves: imgs, 
-                            hates: opps,
-                            score: t,
-                            desc: getBasic(t),
-                            trackUrl: minPopTrackId.album.images[1].url,
-                            trackName: minPopTrackId.name,
-                            artistUrl: minPopArtistId.images[2].url,
-                            artistName: minPopArtistId.name
-                        });
-                    }).catch(err => { console.log(err); res.send('error.html'); });
-                }).catch(err => { console.log(err); res.send('error.html'); });
+                        
+                        oo.clear();
+                        
+                        if (trackMap.size > 0) {
+                            t = 0;
+                            temp = Array.from(trackMap.keys());
+                            while (temp.length - t > limit) {
+                                promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({'ids': temp.slice(t, t + limit).join()}).toString(), headers));
+                                t += limit;
+                            }
+                            promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({'ids': temp.slice(t, temp.length).join()}).toString(), headers));
+                        }
+                        
+                        Promise.all(promises).then(ress => { // gets data on all artists of top tracks and assigns weightage to genres
+                            for (const arr of ress) {
+                                for (const artist of arr.data.artists) {
+                                    for (const genre of artist.genres) {
+                                        if (map.has(genre)) {
+                                            t = map.get(genre) + trackMap.get(artist.id);
+                                        } else {
+                                            t = trackMap.get(artist.id);
+                                        }
+                                        if (t > max)
+                                            max = t;
+                                        map.set(genre, t);
+                                    }
+                                }
+                            }
+        
+                            for (const [key, value] of map.entries()) { // assigns weightage to dissimilar genres
+                                if (value * 160 >= max * 100) {
+                                    temp = mappa.get(key);
+                                    for (i = 0; i < temp[0].length; i++) {
+                                        t = temp[0][i];
+                                        if (oo.has(t)) {
+                                            opps = oo.get(t);
+                                            opps.weight += temp[1][i] * value;
+                                        } else {
+                                            oo.set(t, { genre: t, weight: temp[1][i] * value, url: 'https://p.scdn.co/mp3-preview/' + temp[2][i] });
+                                        }
+                                    }
+                                }
+                            }
+        
+                            opps = Array.from(oo.values()).sort((a, b) => b.weight - a.weight).slice(0, 6);
+                            //console.log(opps);
+                            t = popSum / numOfItems;
+                            res.render('yours', { 
+                                loves: imgs, 
+                                hates: opps,
+                                score: t,
+                                desc: getBasic(t),
+                                trackUrl: minPopTrackId.album.images[1].url,
+                                trackName: minPopTrackId.name,
+                                artistUrl: minPopArtistId.images[2].url,
+                                artistName: minPopArtistId.name
+                            });
+                        }).catch(err => { console.log(err); res.sendFile(__dirname + '/error.html'); });
+                    } else {
+                        res.sendFile(__dirname + '/nodata.html');
+                    }
+                }).catch(err => { console.log(err); res.sendFile(__dirname + '/error.html'); });
             } else {
                 res.redirect('/#error=invalid_token');
             }
-        }).catch(err => { console.log(err); res.send('error.html'); });
+        }).catch(err => { console.log(err); res.sendFile(__dirname + '/error.html'); });
     }
 });
 
