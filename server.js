@@ -28,18 +28,19 @@ app.use(express.static('public'))
 const port = 1116;
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
-//const redirect_uri = 'http://localhost:' + port + '/callback';
-const redirect_uri = 'https://spoopify.me/callback';
+const redirect_uri = process.env.REDIRECT_URI || 'http://localhost:' + port + '/callback';
 let stateKey = 'spotify_auth_state';
 const mappa = new Map();
+let client_token;
 
 fs.createReadStream('genres.csv')
     .pipe(csv())
     .on('data', data => {
         mappa.set(data.genre, [csvtrim(data.opps), JSON.parse(data.weights), csvtrim(data.links)]);
-    }).on('end', () => {
-        console.log('genres loaded');
-    });
+    }).on('end', () => console.log('genres loaded'));
+
+getClientToken();
+setInterval(getClientToken, 3600000);
 
 app.listen(process.env.PORT || port, () => {
 	console.log(`Server listening on port ${port}`);
@@ -82,7 +83,7 @@ app.get('/callback', (req, res) => {
             if (body.status === 200) {
                 let access_token = body.data.access_token
                 const limit = 50;
-                const headers = { headers: {
+                let headers = { headers: {
                     'Authorization': 'Bearer ' + access_token,
                     'Accept': 'application/json',
                     'Content-Type': 'application/json' }
@@ -150,7 +151,12 @@ app.get('/callback', (req, res) => {
                         }
                         
                         oo.clear();
-                        
+                        headers = { headers: {
+                            'Authorization': 'Bearer ' + client_token,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json' }
+                        };
+
                         if (trackMap.size > 0) {
                             t = 0;
                             temp = Array.from(trackMap.keys());
@@ -246,4 +252,16 @@ const getBasic = score => {
     } else {
         return "Sorry for interrupting your grindset";
     }
+}
+
+function getClientToken() {
+    axios.post('https://accounts.spotify.com/api/token',
+        new URLSearchParams({
+            grant_type: 'client_credentials'
+        }).toString(),
+        { headers: { 'Authorization': 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64') }}
+    ).then(body => {
+        client_token = body.data.access_token;
+        console.log('client access token retrieved');
+    }).catch(err => console.log(err));
 }
