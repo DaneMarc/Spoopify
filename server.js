@@ -8,6 +8,7 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const { default: axios } = require('axios');
 require('dotenv').config();
+
 app.set('views', path.join(__dirname,'views'));
 app.set('view engine', 'hbs');
 app.use(express.static('public'))
@@ -25,25 +26,26 @@ app.use(express.static('public'))
         }
     }));
 
-const port = 1116;
-const client_id = process.env.CLIENT_ID;
-const client_secret = process.env.CLIENT_SECRET;
-const redirect_uri = process.env.REDIRECT_URI || 'http://localhost:' + port + '/callback';
-let stateKey = 'spotify_auth_state';
-const mappa = new Map();
+const PORT = 1116;
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:' + PORT + '/callback';
+const STATE_KEY = 'spotify_auth_state';
+const LIMIT = 50;
+const genreMap = new Map();
 let client_token;
 
 fs.createReadStream('genres.csv')
     .pipe(csv())
     .on('data', data => {
-        mappa.set(data.genre, [csvtrim(data.opps), JSON.parse(data.weights), csvtrim(data.links)]);
+        genreMap.set(data.genre, [csvTrim(data.opps), JSON.parse(data.weights), csvTrim(data.links)]);
     }).on('end', () => console.log('genres loaded'));
 
 getClientToken();
 setInterval(getClientToken, 3600000);
 
-app.listen(process.env.PORT || port, () => {
-	console.log(`Server listening on port ${port}`);
+app.listen(process.env.PORT || PORT, () => {
+	console.log(`Server listening on port ${PORT}`);
 });
 
 app.get('/', (req, res) => {
@@ -51,217 +53,285 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-    let state = generateRandomString(16);
-    res.cookie(stateKey, state);
+    const state = generateRandomString(16);
+    res.cookie(STATE_KEY, state);
     res.redirect('https://accounts.spotify.com/authorize?' + new URLSearchParams({
         response_type: 'code',
-        client_id: client_id,
+        client_id: CLIENT_ID,
         scope: 'user-top-read',
-        redirect_uri: redirect_uri,
+        redirect_uri: REDIRECT_URI,
         state: state
     }).toString());
 });
 
 app.get('/callback', (req, res) => {
-    let code = req.query.code || null;
-    let state = req.query.state || null;
-    let storedState = req.cookies ? req.cookies[stateKey] : null;
+    const code = req.query.code || null;
+    const state = req.query.state || null;
+    const storedState = req.cookies ? req.cookies[STATE_KEY] : null;
+
     if (state === null || state !== storedState) {
         res.redirect('/#error=state_mismatch');
-    } else {
-        res.clearCookie(stateKey);
-        axios.post('https://accounts.spotify.com/api/token',
-            new URLSearchParams({
-                code: code,
-                redirect_uri: redirect_uri,
-                grant_type: 'authorization_code'
-            }).toString(), {
-            headers: {
-                'Authorization': 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64')
-            }}
-        ).then(body => {
-            if (body.status === 200) {
-                let access_token = body.data.access_token
-                const limit = 50;
-                let headers = { headers: {
-                    'Authorization': 'Bearer ' + access_token,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json' }
-                };
-                const params = new URLSearchParams({'limit': limit, time_range: 'long_term'}).toString();
-
-                Promise.all([axios.get('https://api.spotify.com/v1/me/top/tracks?' + params, headers), axios.get('https://api.spotify.com/v1/me/top/artists?' + params, headers)]).then(rex => {
-                    const tracks = rex[0].data.items;
-                    const artists = rex[1].data.items;
-                    const numOfItems = tracks.length;
-                    const numOfArtists = artists.length;
-                    if (numOfItems > 0) {
-                        const twice = numOfItems * 2;
-                        const trackMap = new Map(); // artist weights
-                        const map = new Map(); // genre weights
-                        const oo = new Map();
-                        const promises = [];
-                        const imgs = [];
-                        let temp, opps;
-                        let t = 0, max = 0;
-                        let popSum = 0;
-                        let minPopTrack = 100, minPopTrackId;
-                        let minPopArtist = 100, minPopArtistId;
-
-                        for (i = 0; i < numOfArtists; i++) { // assigns weightage to genres of top artists
-                            if (artists[i].popularity < minPopArtist)
-                                minPopArtistId = artists[i];
-                            oo.set(artists[i].id, artists[i].genres);
-                            for (const genre of artists[i].genres) {
-                                if (map.has(genre)) {
-                                    map.set(genre, map.get(genre) + numOfArtists - i);
-                                } else {
-                                    map.set(genre, numOfArtists - i);
-                                }
-                            }
-                        }
-
-                        for (i = 0; i < numOfItems; i++) { //assigns weightage to artists of top tracks
-                            temp = tracks[i];
-                            if (i < 6)
-                                imgs.push(temp.album.images[1].url);
-                            popSum += temp.popularity;
-                            if (temp.popularity < minPopTrack)
-                                minPopTrackId = temp;
-                            for (const artist of temp.artists) {
-                                if (oo.has(artist.id)) {
-                                    for (const genre of oo.get(artist.id)) {
-                                        if (map.has(genre)) {
-                                            t = map.get(genre) + (twice - i) / temp.artists.length;
-                                        } else {
-                                            t = (twice - i) / temp.artists.length;
-                                        }
-                                        if (t > max)
-                                            max = t;
-                                        map.set(genre, t);
-                                    }
-                                } else {
-                                    if (trackMap.has(artist.id)) {
-                                        trackMap.set(artist.id, trackMap.get(artist.id) + (twice - i) / temp.artists.length);
-                                    } else {
-                                        trackMap.set(artist.id, (twice - i) / temp.artists.length);
-                                    }
-                                }
-                            }
-                        }
-                        
-                        oo.clear();
-                        headers = { headers: {
-                            'Authorization': 'Bearer ' + client_token,
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json' }
-                        };
-
-                        if (trackMap.size > 0) {
-                            t = 0;
-                            temp = Array.from(trackMap.keys());
-                            while (temp.length - t > limit) {
-                                promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({'ids': temp.slice(t, t + limit).join()}).toString(), headers));
-                                t += limit;
-                            }
-                            promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({'ids': temp.slice(t, temp.length).join()}).toString(), headers));
-                        }
-                        
-                        Promise.all(promises).then(ress => { // gets data on all artists of top tracks and assigns weightage to genres
-                            for (const arr of ress) {
-                                for (const artist of arr.data.artists) {
-                                    for (const genre of artist.genres) {
-                                        if (map.has(genre)) {
-                                            t = map.get(genre) + trackMap.get(artist.id);
-                                        } else {
-                                            t = trackMap.get(artist.id);
-                                        }
-                                        if (t > max)
-                                            max = t;
-                                        map.set(genre, t);
-                                    }
-                                }
-                            }
-        
-                            for (const [key, value] of map.entries()) { // assigns weightage to dissimilar genres
-                                if (value * 160 >= max * 100) {
-                                    temp = mappa.get(key);
-                                    for (i = 0; i < temp[0].length; i++) {
-                                        t = temp[0][i];
-                                        if (oo.has(t)) {
-                                            opps = oo.get(t);
-                                            opps.weight += temp[1][i] * value;
-                                        } else {
-                                            oo.set(t, { genre: t, weight: temp[1][i] * value, url: 'https://p.scdn.co/mp3-preview/' + temp[2][i] });
-                                        }
-                                    }
-                                }
-                            }
-        
-                            opps = Array.from(oo.values()).sort((a, b) => b.weight - a.weight).slice(0, 6);
-                            //console.log(opps);
-                            t = popSum / numOfItems;
-                            res.render('yours', { 
-                                loves: imgs, 
-                                hates: opps,
-                                score: t,
-                                desc: getBasic(t),
-                                trackUrl: minPopTrackId.album.images[1].url,
-                                trackName: minPopTrackId.name,
-                                artistUrl: minPopArtistId.images[2].url,
-                                artistName: minPopArtistId.name
-                            });
-                        }).catch(err => { console.log(err); res.sendFile(__dirname + '/error.html'); });
-                    } else {
-                        res.sendFile(__dirname + '/nodata.html');
-                    }
-                }).catch(err => { console.log(err); res.sendFile(__dirname + '/error.html'); });
-            } else {
-                res.redirect('/#error=invalid_token');
-            }
-        }).catch(err => { console.log(err); res.sendFile(__dirname + '/error.html'); });
     }
+
+    res.clearCookie(STATE_KEY);
+
+    // Gets user token
+    axios.post('https://accounts.spotify.com/api/token',
+        new URLSearchParams({
+            code: code,
+            redirect_uri: REDIRECT_URI,
+            grant_type: 'authorization_code'
+        }).toString(), {
+            headers: {'Authorization': 'Basic ' + Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64')}
+        }
+    ).then(body => {
+        if (body.status !== 200) {
+            res.redirect('/#error=invalid_token');
+        }
+
+        const access_token = body.data.access_token
+        const params = new URLSearchParams({'limit': LIMIT, time_range: 'long_term'}).toString();
+        const userHeaders = { 
+            headers: {
+                'Authorization': 'Bearer ' + access_token,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        };
+        
+        // Gets user's top artists and tracks
+        Promise.all([axios.get('https://api.spotify.com/v1/me/top/tracks?' + params, userHeaders),
+                axios.get('https://api.spotify.com/v1/me/top/artists?' + params, userHeaders)]).then(userData => {
+            if (userData[0].data.items.length == 0) {
+                res.sendFile(__dirname + '/nodata.html');
+            }
+
+            const tracks = userData[0].data.items;
+            const artists = userData[1].data.items;
+            const numOfTracks = tracks.length;
+            const numOfArtists = artists.length;
+            const BIG_WEIGHT = numOfTracks * 2;
+
+            const artistWeights = new Map(); // Artist weightage to help assign genre weightage after retrieving additional artist data
+            const genreWeights = new Map(); // Genre weightage
+            const artistGenres = new Map(); // Genres associated with each artist
+            const promises = [];
+            const imgs = [];
+
+            let max = 0;
+            let totalPopularity = 0;
+            let minPopTrack = 100;
+            let minPopTrackId;
+            let minPopArtist = 100;
+            let minPopArtistId;
+
+            const clientHeaders = {
+                headers: {
+                    'Authorization': 'Bearer ' + client_token,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            // Assigns weightage to genres of top artists
+            for (let i = 0; i < numOfArtists; i++) {
+                if (artists[i].popularity < minPopArtist) {
+                    minPopArtist = artists[i].popularity;
+                    minPopArtistId = artists[i];
+                }
+
+                artistGenres.set(artists[i].id, artists[i].genres);
+
+                for (const genre of artists[i].genres) {
+                    if (genreWeights.has(genre)) {
+                        genreWeights.set(genre, genreWeights.get(genre) + numOfArtists - i);
+                    } else {
+                        genreWeights.set(genre, numOfArtists - i);
+                    }
+                }
+            }
+
+            // Assigns weightage to artists of top tracks
+            for (let i = 0; i < numOfTracks; i++) { 
+                const track = tracks[i];
+                totalPopularity += track.popularity;
+
+                // Gets album covers of the user's top 5 tracks
+                if (i < 6) {
+                    imgs.push(track.album.images[1].url);
+                }
+
+                // Gets user's least popular favourite track
+                if (track.popularity < minPopTrack) {
+                    minPopTrack = track.popularity;
+                    minPopTrackId = track;
+                }
+
+                for (const artist of track.artists) {
+                    if (artistGenres.has(artist.id)) {
+                        for (const genre of artistGenres.get(artist.id)) {
+                            let weight;
+
+                            if (genreWeights.has(genre)) {
+                                weight = genreWeights.get(genre) + (BIG_WEIGHT - i) / track.artists.length;
+                            } else {
+                                weight = (BIG_WEIGHT - i) / track.artists.length;
+                            }
+
+                            // stores the max genre weightage to reduce unnecessary computation later on
+                            if (weight > max) {
+                                max = weight;
+                            }
+
+                            genreWeights.set(genre, weight);
+                        }
+                    } else {
+                        if (artistWeights.has(artist.id)) {
+                            artistWeights.set(artist.id, artistWeights.get(artist.id) + (BIG_WEIGHT - i) / track.artists.length);
+                        } else {
+                            artistWeights.set(artist.id, (BIG_WEIGHT - i) / track.artists.length);
+                        }
+                    }
+                }
+            }
+
+            // Populates the promises array with queries for data of artists not found in the artistGenres map
+            if (artistWeights.size > 0) {
+                const remainingArtists = Array.from(artistWeights.keys());
+                let queryCount = 0;
+
+                while (remainingArtists.length - queryCount > LIMIT) {
+                    promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({
+                        'ids': remainingArtists.slice(queryCount, queryCount + LIMIT).join()}).toString(), clientHeaders));
+                    queryCount += LIMIT;
+                }
+
+                promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({
+                    'ids': remainingArtists.slice(queryCount, remainingArtists.length).join()}).toString(), clientHeaders));
+            }
+            
+            // Gets data on all remaining artists of the user's top tracks and assigns weightage to their corresponding genres
+            Promise.all(promises).then(artistArrs => {
+                const opps = new Map();
+
+                for (const arr of artistArrs) {
+                    for (const artist of arr.data.artists) {
+                        for (const genre of artist.genres) {
+                            let weight;
+
+                            if (genreWeights.has(genre)) {
+                                weight = genreWeights.get(genre) + artistWeights.get(artist.id);
+                            } else {
+                                weight = artistWeights.get(artist.id);
+                            }
+
+                            if (weight > max) {
+                                max = weight;
+                            }
+
+                            genreWeights.set(genre, weight);
+                        }
+                    }
+                }
+
+                // Assigns weightage to dissimilar genres
+                for (const [key, value] of genreWeights.entries()) {
+
+                    // Skips genre if it cannot possibly be the most loved/hated
+                    if (value * 16 >= max * 10) {
+                        genreData = genreMap.get(key);
+
+                        for (i = 0; i < genreData[0].length; i++) {
+                            const genre = genreData[0][i];
+
+                            if (opps.has(genre)) {
+                                const opps = opps.get(genre);
+                                opps.weight += genreData[1][i] * value;
+                            } else {
+                                opps.set(genre, {
+                                    genre: genre,
+                                    weight: genreData[1][i] * value,
+                                    url: 'https://p.scdn.co/mp3-preview/' + genreData[2][i]
+                                });
+                            }
+                        }
+                    }
+                }
+
+                res.render('yours', { 
+                    loves: imgs, 
+                    hates: Array.from(opps.values()).sort((a, b) => b.weight - a.weight).slice(0, 6),
+                    score: totalPopularity / numOfTracks,
+                    desc: getBasic(totalPopularity / numOfTracks),
+                    trackUrl: minPopTrackId.album.images[1].url,
+                    trackName: minPopTrackId.name,
+                    artistUrl: minPopArtistId.images[1].url,
+                    artistName: minPopArtistId.name
+                });
+            }).catch(err => {
+                console.log(err);
+                res.sendFile(__dirname + '/error.html');
+            });
+        }).catch(err => {
+            console.log(err);
+            res.sendFile(__dirname + '/error.html');
+        });
+    }).catch(err => {
+        console.log(err);
+        res.sendFile(__dirname + '/hey.html');
+    });
 });
 
+// Generates a random 16 character string for cookies
 const generateRandomString = function(length) {
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let text = '';
-    let possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
     for (let i = 0; i < length; i++) {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
+
     return text;
 };
 
-const csvtrim = arr => {
-    arr = arr.slice(1,-1).split(',');
-    for (i = 0; i < arr.length; i++) 
+// Returns an array of genres given a its string representation from the csv file
+// Used in place of JSOn.parse() as parse() does not play well with certain characters found in the genres
+const csvTrim = genreString => {
+    const arr = genreString.slice(1,-1).split(',');
+
+    for (i = 0; i < arr.length; i++) {
         arr[i] = arr[i].slice(1,-1);
+    }
+
     return arr;
 }
 
+
+// Gets the user's basic description based on their average song popularity
 const getBasic = score => {
     if (score >=  80) {
         return "White girl";
     } else if (score >= 60) {
-        return "Average (Taylor's Version)";
-    } else if (score >= 40) {
         return "Average";
-    } else if (score >= 20) {
+    } else if (score >= 40) {
         return "Indie kid";
+    } else if (score >= 20) {
+        return "Weirdo";
     } else {
-        return "Sorry for interrupting your grindset";
+        return "Apologies for interrupting your grindset";
     }
 }
 
+// Retrieves a client token if one is not found/expired
+// Allows the server to access song and artist data
 function getClientToken() {
     axios.post('https://accounts.spotify.com/api/token',
         new URLSearchParams({
             grant_type: 'client_credentials'
         }).toString(),
-        { headers: { 'Authorization': 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64') }}
+        { headers: { 'Authorization': 'Basic ' + Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64') }}
     ).then(body => {
         client_token = body.data.access_token;
-        console.log('client access token retrieved');
+        console.log('client token retrieved');
     }).catch(err => console.log(err));
 }
