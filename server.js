@@ -120,9 +120,9 @@ app.get('/callback', (req, res) => {
 
             let max = 0;
             let totalPopularity = 0;
-            let minPopTrack = 100;
+            let minPopTrack = 101;
             let minPopTrackId;
-            let minPopArtist = 100;
+            let minPopArtist = 101;
             let minPopArtistId;
 
             const clientHeaders = {
@@ -239,14 +239,14 @@ app.get('/callback', (req, res) => {
 
                     // Skips genre if it cannot possibly be the most loved/hated
                     if (value * 16 >= max * 10) {
-                        genreData = genreMap.get(key);
+                        const genreData = genreMap.get(key);
 
                         for (i = 0; i < genreData[0].length; i++) {
                             const genre = genreData[0][i];
 
                             if (opps.has(genre)) {
-                                const opps = opps.get(genre);
-                                opps.weight += genreData[1][i] * value;
+                                const oppItem = opps.get(genre);
+                                oppItem.weight += genreData[1][i] * value;
                             } else {
                                 opps.set(genre, {
                                     genre: genre,
