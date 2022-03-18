@@ -238,7 +238,7 @@ app.get('/callback', (req, res) => {
                 for (const [key, value] of genreWeights.entries()) {
 
                     // Skips genre if it cannot possibly be the most loved/hated
-                    if (value * 16 >= max * 10) {
+                    if (value * 16 >= max * 10 && genreMap.has(key)) {
                         const genreData = genreMap.get(key);
 
                         for (i = 0; i < genreData[0].length; i++) {
