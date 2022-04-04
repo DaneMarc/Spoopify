@@ -20,7 +20,7 @@ app.use(express.static('public'))
         contentSecurityPolicy: {
             useDefaults: true,
             directives: {
-                "img-src": ["'self'", "https://i.scdn.co/image/"],
+                "img-src": ["'self'", "https://i.scdn.co/image/", "https://daneeee.blob.core.windows.net/images/noimage.jpg"],
                 "media-src": ["'self'", "https://p.scdn.co/mp3-preview/"]
             }
         }
@@ -158,7 +158,7 @@ app.get('/callback', (req, res) => {
 
                 // Gets album covers of the user's top 5 tracks
                 if (i < 6) {
-                    imgs.push(track.album.images[1].url);
+                    imgs.push(getImageUrl(track.album.images));
                 }
 
                 // Gets user's least popular favourite track
@@ -263,9 +263,9 @@ app.get('/callback', (req, res) => {
                     hates: Array.from(opps.values()).sort((a, b) => b.weight - a.weight).slice(0, 6),
                     score: totalPopularity / numOfTracks,
                     desc: getBasic(totalPopularity / numOfTracks),
-                    trackUrl: minPopTrackId.album.images[1].url,
+                    trackUrl: getImageUrl(minPopTrackId.album.images),
                     trackName: minPopTrackId.name,
-                    artistUrl: minPopArtistId.images[1].url,
+                    artistUrl: getImageUrl(minPopArtistId.images),
                     artistName: minPopArtistId.name
                 });
             }).catch(err => {
@@ -334,4 +334,14 @@ function getClientToken() {
         client_token = body.data.access_token;
         console.log('client token retrieved');
     }).catch(err => console.log(err));
+}
+
+const getImageUrl = images => {
+    if (images.length > 1) {
+        return images[1].url;
+    } else if (images.length == 1) {
+        return images[0].url;
+    } else {
+        return "https://daneeee.blob.core.windows.net/images/noimage.jpg"
+    }
 }
