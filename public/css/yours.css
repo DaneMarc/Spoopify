@@ -287,11 +287,12 @@ p {
     }
 
     #song {
-        width: 50%;
+        width: 45%;
+        margin-right: 10%;
     }
 
     #artist {
-        width: 50%;
+        width: 45%;
     }
 
     .box img {

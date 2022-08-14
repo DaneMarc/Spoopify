@@ -32,6 +32,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:' + PORT + '/callback';
 const STATE_KEY = 'spotify_auth_state';
 const LIMIT = 50;
+const NO_IMG = "https://daneeee.blob.core.windows.net/images/noimage.jpg";
 const genreMap = new Map();
 let client_token;
 
@@ -158,7 +159,7 @@ app.get('/callback', (req, res) => {
 
                 // Gets album covers of the user's top 5 tracks
                 if (i < 6) {
-                    imgs.push(getImageUrl(track.album.images));
+                    imgs.push(getAlbumImage(track));
                 }
 
                 // Gets user's least popular favourite track
@@ -263,9 +264,9 @@ app.get('/callback', (req, res) => {
                     hates: Array.from(opps.values()).sort((a, b) => b.weight - a.weight).slice(0, 6),
                     score: totalPopularity / numOfTracks,
                     desc: getBasic(totalPopularity / numOfTracks),
-                    trackUrl: getImageUrl(minPopTrackId.album.images),
+                    trackUrl: getAlbumImage(minPopTrackId),
                     trackName: minPopTrackId.name,
-                    artistUrl: getImageUrl(minPopArtistId.images),
+                    artistUrl: getImage(minPopArtistId.images),
                     artistName: minPopArtistId.name
                 });
             }).catch(err => {
@@ -336,12 +337,24 @@ function getClientToken() {
     }).catch(err => console.log(err));
 }
 
-const getImageUrl = images => {
+const getAlbumImage = track => {
+    if (Object.hasOwn(track, 'album') && track.album.images.length > 0) {
+        if (track.album.images.length > 1) {
+            return track.album.images[1].url;
+        } else {
+            return track.album.images[0].url;
+        }
+    } else {
+        return NO_IMG;
+    }
+}
+
+const getImage = images => {
     if (images.length > 1) {
         return images[1].url;
     } else if (images.length == 1) {
         return images[0].url;
     } else {
-        return "https://daneeee.blob.core.windows.net/images/noimage.jpg"
+        return NO_IMG;
     }
 }
