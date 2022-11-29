@@ -87,10 +87,11 @@ app.get('/callback', (req, res) => {
         }
     ).then(body => {
         if (body.status !== 200) {
+            console.log('invalid token');
             res.redirect('/#error=invalid_token');
         }
-
-        const access_token = body.data.access_token
+        console.log('token retrieved');
+        const access_token = body.data.access_token;
         const params = new URLSearchParams({'limit': LIMIT, time_range: 'long_term'}).toString();
         const userHeaders = { 
             headers: {
@@ -270,15 +271,21 @@ app.get('/callback', (req, res) => {
                     artistName: minPopArtistId.name
                 });
             }).catch(err => {
-                console.log(err);
+                console.log('error from getting remaining artists')
+                console.log(err.error.data.status);
+                console.log(err.error.data.message);
                 res.sendFile(__dirname + '/error.html');
             });
         }).catch(err => {
-            console.log(err);
+            console.log('error from getting user\'s top tracks and artists')
+            console.log(err.error.data.status);
+            console.log(err.error.data.message);
             res.sendFile(__dirname + '/error.html');
         });
     }).catch(err => {
-        console.log(err);
+        console.log('error from getting authorization code')
+        console.log(err.error.data.status);
+        console.log(err.error.data.message);
         res.sendFile(__dirname + '/hey.html');
     });
 });
@@ -338,7 +345,7 @@ function getClientToken() {
 }
 
 const getAlbumImage = track => {
-    if (Object.hasOwn(track, 'album') && track.album.images.length > 0) {
+    if (track != null && Object.hasOwn(track, 'album') && track.album.images.length > 0) {
         if (track.album.images.length > 1) {
             return track.album.images[1].url;
         } else {
