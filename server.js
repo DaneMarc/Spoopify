@@ -17,6 +17,7 @@ app.use(express.static('public'))
     .use(express.json())
     .use(compression())
     .use(helmet({
+        crossOriginEmbedderPolicy: false,
         contentSecurityPolicy: {
             useDefaults: true,
             directives: {
@@ -272,20 +273,20 @@ app.get('/callback', (req, res) => {
                 });
             }).catch(err => {
                 console.log('error from getting remaining artists')
-                console.log(err.error.data.status);
-                console.log(err.error.data.message);
+                console.log(err.error.status);
+                console.log(err.error.message);
                 res.sendFile(__dirname + '/error.html');
             });
         }).catch(err => {
             console.log('error from getting user\'s top tracks and artists')
-            console.log(err.error.data.status);
-            console.log(err.error.data.message);
+            console.log(err.error.status);
+            console.log(err.error.message);
             res.sendFile(__dirname + '/error.html');
         });
     }).catch(err => {
         console.log('error from getting authorization code')
-        console.log(err.error.data.status);
-        console.log(err.error.data.message);
+        console.log(err.error.status);
+        console.log(err.error.message);
         res.sendFile(__dirname + '/hey.html');
     });
 });
