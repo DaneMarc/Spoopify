@@ -268,7 +268,7 @@ app.get('/callback', (req, res) => {
                     desc: getBasic(totalPopularity / numOfTracks),
                     trackUrl: getAlbumImage(minPopTrackId),
                     trackName: minPopTrackId.name,
-                    artistUrl: getImage(minPopArtistId.images),
+                    artistUrl: getArtistImage(minPopArtistId),
                     artistName: minPopArtistId.name
                 });
             }).catch(err => {
@@ -360,11 +360,13 @@ const getAlbumImage = track => {
     }
 }
 
-const getImage = images => {
-    if (images.length > 1) {
-        return images[1].url;
-    } else if (images.length == 1) {
-        return images[0].url;
+const getArtistImage = artist => {
+    if (Object.hasOwn(artist, 'images') && artist.images.length > 0) {
+        if (artist.images.length == 1) {
+            return artist.images[0].url;
+        } else {
+            return artist.images[1].url;
+        }
     } else {
         return NO_IMG;
     }
