@@ -17,7 +17,6 @@ app.use(express.static('public'))
     .use(express.json())
     .use(compression())
     .use(helmet({
-        crossOriginEmbedderPolicy: false,
         contentSecurityPolicy: {
             useDefaults: true,
             directives: {
