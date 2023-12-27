@@ -71,7 +71,7 @@ app.get('/callback', (req, res) => {
     const storedState = req.cookies ? req.cookies[STATE_KEY] : null;
 
     if (state === null || state !== storedState) {
-        res.redirect('/#error=state_mismatch');
+        return res.redirect('/#error=state_mismatch');
     }
 
     res.clearCookie(STATE_KEY);
@@ -88,7 +88,7 @@ app.get('/callback', (req, res) => {
     ).then(body => {
         if (body.status !== 200) {
             console.log('invalid token');
-            res.redirect('/#error=invalid_token');
+            return res.redirect('/#error=invalid_token');
         }
         console.log('token retrieved');
         const access_token = body.data.access_token;
@@ -105,7 +105,7 @@ app.get('/callback', (req, res) => {
         Promise.all([axios.get('https://api.spotify.com/v1/me/top/tracks?' + params, userHeaders),
                 axios.get('https://api.spotify.com/v1/me/top/artists?' + params, userHeaders)]).then(userData => {
             if (userData[0].data.items.length == 0) {
-                res.sendFile(__dirname + '/nodata.html');
+                return res.sendFile(__dirname + '/nodata.html');
             }
 
             const tracks = userData[0].data.items;
@@ -114,7 +114,6 @@ app.get('/callback', (req, res) => {
             const numOfArtists = artists.length;
             const BIG_WEIGHT = numOfTracks * 2;
 
-            const artistWeights = new Map(); // Artist weightage to help assign genre weightage after retrieving additional artist data
             const genreWeights = new Map(); // Genre weightage
             const artistGenres = new Map(); // Genres associated with each artist
             const promises = [];
@@ -154,7 +153,7 @@ app.get('/callback', (req, res) => {
             }
 
             // Assigns weightage to artists of top tracks
-            for (let i = 0; i < numOfTracks; i++) { 
+            for (let i = 0; i < numOfTracks; i++) {
                 const track = tracks[i];
                 totalPopularity += track.popularity;
 
@@ -187,96 +186,48 @@ app.get('/callback', (req, res) => {
 
                             genreWeights.set(genre, weight);
                         }
-                    } else {
-                        if (artistWeights.has(artist.id)) {
-                            artistWeights.set(artist.id, artistWeights.get(artist.id) + (BIG_WEIGHT - i) / track.artists.length);
-                        } else {
-                            artistWeights.set(artist.id, (BIG_WEIGHT - i) / track.artists.length);
-                        }
                     }
                 }
-            }
-
-            // Populates the promises array with queries for data of artists not found in the artistGenres map
-            if (artistWeights.size > 0) {
-                const remainingArtists = Array.from(artistWeights.keys());
-                let queryCount = 0;
-
-                while (remainingArtists.length - queryCount > LIMIT) {
-                    promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({
-                        'ids': remainingArtists.slice(queryCount, queryCount + LIMIT).join()}).toString(), clientHeaders));
-                    queryCount += LIMIT;
-                }
-
-                promises.push(axios.get('https://api.spotify.com/v1/artists?' + new URLSearchParams({
-                    'ids': remainingArtists.slice(queryCount, remainingArtists.length).join()}).toString(), clientHeaders));
             }
             
-            // Gets data on all remaining artists of the user's top tracks and assigns weightage to their corresponding genres
-            Promise.all(promises).then(artistArrs => {
-                const opps = new Map();
+            // Assigns weightage to their corresponding genres
+            const opps = new Map();
 
-                for (const arr of artistArrs) {
-                    for (const artist of arr.data.artists) {
-                        for (const genre of artist.genres) {
-                            let weight;
+            // Assigns weightage to dissimilar genres
+            for (const [key, value] of genreWeights.entries()) {
 
-                            if (genreWeights.has(genre)) {
-                                weight = genreWeights.get(genre) + artistWeights.get(artist.id);
-                            } else {
-                                weight = artistWeights.get(artist.id);
-                            }
+                // Skips genre if it cannot possibly be the most loved/hated
+                if (value * 16 >= max * 10 && genreMap.has(key)) {
+                    const genreData = genreMap.get(key);
 
-                            if (weight > max) {
-                                max = weight;
-                            }
+                    for (i = 0; i < genreData[0].length; i++) {
+                        const genre = genreData[0][i];
 
-                            genreWeights.set(genre, weight);
+                        if (opps.has(genre)) {
+                            const oppItem = opps.get(genre);
+                            oppItem.weight += genreData[1][i] * value;
+                        } else {
+                            opps.set(genre, {
+                                genre: genre,
+                                weight: genreData[1][i] * value,
+                                url: 'https://p.scdn.co/mp3-preview/' + genreData[2][i]
+                            });
                         }
                     }
                 }
+            }
 
-                // Assigns weightage to dissimilar genres
-                for (const [key, value] of genreWeights.entries()) {
-
-                    // Skips genre if it cannot possibly be the most loved/hated
-                    if (value * 16 >= max * 10 && genreMap.has(key)) {
-                        const genreData = genreMap.get(key);
-
-                        for (i = 0; i < genreData[0].length; i++) {
-                            const genre = genreData[0][i];
-
-                            if (opps.has(genre)) {
-                                const oppItem = opps.get(genre);
-                                oppItem.weight += genreData[1][i] * value;
-                            } else {
-                                opps.set(genre, {
-                                    genre: genre,
-                                    weight: genreData[1][i] * value,
-                                    url: 'https://p.scdn.co/mp3-preview/' + genreData[2][i]
-                                });
-                            }
-                        }
-                    }
-                }
-
-                res.render('yours', { 
-                    loves: imgs, 
-                    hates: Array.from(opps.values()).sort((a, b) => b.weight - a.weight).slice(0, 6),
-                    score: totalPopularity / numOfTracks,
-                    desc: getBasic(totalPopularity / numOfTracks),
-                    trackUrl: getAlbumImage(minPopTrackId),
-                    trackName: minPopTrackId.name,
-                    artistUrl: getArtistImage(minPopArtistId),
-                    artistName: minPopArtistId.name
-                });
-            }).catch(err => {
-                console.log('error from getting remaining artists')
-                console.log(err);
-                console.log(err.status);
-                console.log(err.message);
-                res.sendFile(__dirname + '/error.html');
+            return res.render('yours', { 
+                loves: imgs, 
+                hates: Array.from(opps.values()).sort((a, b) => b.weight - a.weight).slice(0, 6),
+                score: totalPopularity / numOfTracks,
+                desc: getBasic(totalPopularity / numOfTracks),
+                trackUrl: getAlbumImage(minPopTrackId),
+                trackName: Object.hasOwn(minPopTrackId, 'name') ? minPopTrackId.name : 'Unknown',
+                artistUrl: getArtistImage(minPopArtistId),
+                artistName: Object.hasOwn(minPopArtistId, 'name') ? minPopArtistId.name : 'Unknown'
             });
+
         }).catch(err => {
             console.log('error from getting user\'s top tracks and artists')
             console.log(err);
