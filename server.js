@@ -311,7 +311,7 @@ const getAlbumImage = track => {
 }
 
 const getArtistImage = artist => {
-    if (Object.hasOwn(artist, 'images') && artist.images.length > 0) {
+    if (artist != null && Object.hasOwn(artist, 'images') && artist.images.length > 0) {
         if (artist.images.length == 1) {
             return artist.images[0].url;
         } else {
