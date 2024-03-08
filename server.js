@@ -230,15 +230,15 @@ app.get('/callback', (req, res) => {
 
         }).catch(err => {
             console.log('error from getting user\'s top tracks and artists')
-            console.log(err);
-            console.log(err.status);
+            //console.log(err);
+            //console.log(err.status);
             console.log(err.message);
             res.sendFile(__dirname + '/error.html');
         });
     }).catch(err => {
         console.log('error from getting authorization code')
-        console.log(err);
-        console.log(err.status);
+        //console.log(err);
+        //console.log(err.status);
         console.log(err.message);
         res.sendFile(__dirname + '/hey.html');
     });
