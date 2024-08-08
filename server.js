@@ -112,27 +112,17 @@ app.get('/callback', (req, res) => {
             const artists = userData[1].data.items;
             const numOfTracks = tracks.length;
             const numOfArtists = artists.length;
-            const BIG_WEIGHT = numOfTracks * 2;
+            //const BIG_WEIGHT = numOfTracks * 2;
 
             const genreWeights = new Map(); // Genre weightage
             const artistGenres = new Map(); // Genres associated with each artist
-            const promises = [];
             const imgs = [];
 
-            let max = 0;
             let totalPopularity = 0;
             let minPopTrack = 101;
             let minPopTrackId;
             let minPopArtist = 101;
             let minPopArtistId;
-
-            const clientHeaders = {
-                headers: {
-                    'Authorization': 'Bearer ' + client_token,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            };
 
             // Assigns weightage to genres of top artists
             for (let i = 0; i < numOfArtists; i++) {
@@ -145,9 +135,9 @@ app.get('/callback', (req, res) => {
 
                 for (const genre of artists[i].genres) {
                     if (genreWeights.has(genre)) {
-                        genreWeights.set(genre, genreWeights.get(genre) + numOfArtists - i);
+                        genreWeights.set(genre, genreWeights.get(genre) + Math.log(numOfArtists - i));
                     } else {
-                        genreWeights.set(genre, numOfArtists - i);
+                        genreWeights.set(genre, Math.log(numOfArtists - i));
                     }
                 }
             }
@@ -155,6 +145,7 @@ app.get('/callback', (req, res) => {
             // Assigns weightage to artists of top tracks
             for (let i = 0; i < numOfTracks; i++) {
                 const track = tracks[i];
+                let numTrackArtists = 0;
                 totalPopularity += track.popularity;
 
                 // Gets album covers of the user's top 5 tracks
@@ -168,23 +159,21 @@ app.get('/callback', (req, res) => {
                     minPopTrackId = track;
                 }
 
+                // Gets number of track artists in artistGenres
+                for (const artist of track.artists) {
+                    if (artistGenres.has(artist.id)) {
+                        numTrackArtists++;
+                    }
+                }
+
                 for (const artist of track.artists) {
                     if (artistGenres.has(artist.id)) {
                         for (const genre of artistGenres.get(artist.id)) {
-                            let weight;
-
                             if (genreWeights.has(genre)) {
-                                weight = genreWeights.get(genre) + (BIG_WEIGHT - i) / track.artists.length;
+                                genreWeights.set(genre, genreWeights.get(genre) + Math.log((numOfTracks - i) / numTrackArtists));
                             } else {
-                                weight = (BIG_WEIGHT - i) / track.artists.length;
+                                genreWeights.set(genre, Math.log((numOfTracks - i) / numTrackArtists));
                             }
-
-                            // stores the max genre weightage to reduce unnecessary computation later on
-                            if (weight > max) {
-                                max = weight;
-                            }
-
-                            genreWeights.set(genre, weight);
                         }
                     }
                 }
@@ -197,7 +186,7 @@ app.get('/callback', (req, res) => {
             for (const [key, value] of genreWeights.entries()) {
 
                 // Skips genre if it cannot possibly be the most loved/hated
-                if (value * 16 >= max * 10 && genreMap.has(key)) {
+                if (genreMap.has(key)) {
                     const genreData = genreMap.get(key);
 
                     for (i = 0; i < genreData[0].length; i++) {
@@ -229,16 +218,12 @@ app.get('/callback', (req, res) => {
             });
 
         }).catch(err => {
-            console.log('error from getting user\'s top tracks and artists')
-            //console.log(err);
-            //console.log(err.status);
+            console.log('error from getting user\'s top tracks and artists');
             console.log(err.message);
             res.sendFile(__dirname + '/error.html');
         });
     }).catch(err => {
-        console.log('error from getting authorization code')
-        //console.log(err);
-        //console.log(err.status);
+        console.log('error from getting authorization code');
         console.log(err.message);
         res.sendFile(__dirname + '/hey.html');
     });
