@@ -256,8 +256,8 @@ const generateRandomString = function(length) {
     return text;
 };
 
-// Returns an array of genres given a its string representation from the csv file
-// Used in place of JSOn.parse() as parse() does not play well with certain characters found in the genres
+// Returns an array of genres given its string representation from the csv file
+// Used in place of JSON.parse() as parse() does not play well with certain characters found in the genres
 const csvTrim = genreString => {
     const arr = genreString.slice(1,-1).split(',');
 
@@ -278,7 +278,7 @@ const getBasic = score => {
     } else if (score >= 40) {
         return "Indie kid";
     } else if (score >= 20) {
-        return "Weirdo";
+        return "You are special and that's ok";
     } else {
         return "Apologies for interrupting your grindset";
     }
@@ -299,7 +299,7 @@ function getClientToken() {
 }
 
 const getAlbumImage = track => {
-    if (track != null && Object.hasOwn(track, 'album') && track.album.images.length > 0) {
+    if (track != null && Object.hasOwn(track, 'album') && Object.hasOwn(track.album, 'images') && track.album.images.length > 0) {
         if (track.album.images.length > 1) {
             return track.album.images[1].url;
         } else {
