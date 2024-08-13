@@ -32,6 +32,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:' + PORT + '/callback';
 const STATE_KEY = 'spotify_auth_state';
 const LIMIT = 50;
+const EMBED_DIM = 50;
 const NO_IMG = "https://storage.googleapis.com/daneee.com/no_img.jpg";
 const genreMap = new Map();
 let client_token;
@@ -42,6 +43,12 @@ fs.createReadStream('genres.csv')
         genreMap.set(data.genre, [data.url, csvTrim(data.opp_genres), JSON.parse(data.opp_weights), csvTrim(data.opp_urls)]);
     }).on('end', () => console.log('genres loaded'));
 
+let genreEmbeds = JSON.parse(fs.readFileSync('genre_embeddings.json'));
+let horoEmbeds = JSON.parse(fs.readFileSync('horoscope_embeddings.json'));
+genreEmbeds = new Map(Object.entries(genreEmbeds));
+horoEmbeds = new Map(Object.entries(horoEmbeds));
+console.log("embeddings loaded");
+
 getClientToken();
 setInterval(getClientToken, 3600000);
 
@@ -51,6 +58,10 @@ app.listen(process.env.PORT || PORT, () => {
 
 app.get('/', (req, res) => {
 	res.sendFile(__dirname + '/hey.html');
+});
+
+app.get('/yours', (req, res) => {
+    res.sendFile(__dirname + '/yours.html');
 });
 
 app.get('/login', (req, res) => {
@@ -194,6 +205,9 @@ app.get('/callback', (req, res) => {
                     topGenreData.push({ "genre": genre[0], "url": 'https://p.scdn.co/mp3-preview/' + genreMap.get(genre[0])[0] });
                 }
             }
+
+            // Get user's horoscope
+            const horoscope = getHoroscope(genreWeights);
             
             // Assigns weightage to their corresponding genres
             const opps = new Map();
@@ -229,6 +243,8 @@ app.get('/callback', (req, res) => {
                 hates: Array.from(opps.values()).sort((a, b) => b.weight - a.weight).slice(0, 5),
                 score: totalPopularity / numOfTracks,
                 desc: getBasic(totalPopularity / numOfTracks),
+                horoemoji: getHoroEmoji(horoscope),
+                horoscope: horoscope,
                 trackUrl: getAlbumImage(minPopTrackId),
                 trackTitle: Object.hasOwn(minPopTrackId, 'name') ? minPopTrackId.name : 'Unknown',
                 trackArtist: Object.hasOwn(minPopTrackId, 'artists') ? minPopTrackId.artists[0].name : 'Unknown',
@@ -285,6 +301,85 @@ const getBasic = score => {
         return "Indie Kid";
     } else {
         return "Apologies for interrupting your grindset";
+    }
+}
+
+const getHoroscope = genreWeights => {
+    let totalGenreEmbed = new Array(EMBED_DIM);
+    for (let i = 0; i < EMBED_DIM; ++i) totalGenreEmbed[i] = 0;
+
+    for (const [key, value] of genreWeights.entries()) {
+        if (genreEmbeds.has(key)) {
+            for (let i = 0; i < EMBED_DIM; i++) {
+                totalGenreEmbed[i] += genreEmbeds.get(key)[i] * value
+            }
+        }
+    }
+
+    let avgGenreEmbed = totalGenreEmbed.map(x => x / genreWeights.size);
+    let max = -1;
+    let horo = "";
+
+    for (const [key, value] of horoEmbeds.entries()) {
+        similarity = cosineSimilarity(avgGenreEmbed, value)
+        if (similarity > max) {
+            max = similarity
+            horo = key
+        }
+    }
+
+    return horo;
+}
+
+const cosineSimilarity = (arr1, arr2) => {
+    if (arr1.length !== arr2.length) {
+        throw new Error('Arrays must have the same length');
+    }
+
+    let dotProduct = 0;
+    let magnitude1 = 0;
+    let magnitude2 = 0;
+
+    for (let i = 0; i < arr1.length; i++) {
+        dotProduct += arr1[i] * arr2[i];
+        magnitude1 += arr1[i] ** 2;
+        magnitude2 += arr2[i] ** 2;
+    }
+
+    magnitude1 = Math.sqrt(magnitude1);
+    magnitude2 = Math.sqrt(magnitude2);
+
+    return dotProduct / (magnitude1 * magnitude2);
+};
+
+const getHoroEmoji = sign => {
+    switch (sign) {
+        case 'Aries':
+            return '♈';
+        case 'Taurus':
+            return '♉';
+        case 'Gemini':
+            return '♊';
+        case 'Cancer':
+            return '♋';
+        case 'Leo':
+            return '♌';
+        case 'Virgo':
+            return '♍';
+        case 'Libra':
+            return '♎';
+        case 'Scorpio':
+            return '♏';
+        case 'Sagittarius':
+            return '♐';
+        case 'Capricorn':
+            return '♑';
+        case 'Aquarius':
+            return '♒';
+        case 'Pisces':
+            return '♓';
+        default:
+            return '';
     }
 }
 

@@ -17,9 +17,9 @@ body {
 h1 {
     font-family: 'Electrolize', monospace;
     font-size: 60px;
-    text-shadow: -1.5px -1.5px 1px rgba(255,255,255,0.1),
-                1.5px 1.5px 1px rgba(0,0,0,0.05);
-    margin: 5% 0;
+    text-shadow: -1px -1px 1px rgba(255,255,255,0.2),
+                1px 1px 1px rgba(0,0,0,0.1);
+    margin: 4% 0;
 }
 
 h2 {
@@ -87,6 +87,24 @@ p {
 
 #artists .item-desc {
     padding: 3% 7%;
+}
+
+#basicness {
+    display: block;
+}
+
+#horoscope {
+    margin-top: 0;
+}
+
+#horoscope h1 {
+    font-size: 90px;
+    margin: 0;
+}
+
+#horoscope p {
+    font-size: 1.4rem;
+    padding: 14% 0 0 4%;
 }
 
 #artists, #loves, #faves {
