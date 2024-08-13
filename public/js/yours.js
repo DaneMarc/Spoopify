@@ -1,10 +1,15 @@
-const butts = document.getElementById('buttons').children;
+const buttons = document.getElementsByClassName('button');
 const previews = [];
-for (let but of butts) {
+i = 0;
+for (let but of buttons) {
     previews.push(new Audio(but.dataset.url));
+    if (i > 4) {
+        but.dataset.id = i;
+    }
     but.onclick = src => {
         let audio = previews[but.dataset.id];
         if (but.classList.contains('clicked')) {
+            but.classList.remove('no-hover');
             but.classList.remove('clicked');
             if (!audio.paused) {
                 audio.pause();
@@ -13,7 +18,8 @@ for (let but of butts) {
                 but.children[1].firstChild.classList.remove('playyying');
             }
         } else {
-            for (let b of butts) {
+            but.classList.add('no-hover');
+            for (let b of buttons) {
                 b.classList.remove('clicked');
                 b.children[0].classList.remove('playing');
                 b.children[1].firstChild.classList.remove('playyying');
@@ -31,4 +37,5 @@ for (let but of butts) {
             });
         }
     }
+    i++;
 }

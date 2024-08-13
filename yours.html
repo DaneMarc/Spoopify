@@ -6,79 +6,138 @@
         <meta name="viewport" content="height=device-height, width=device-width, initial-scale=1">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Electrolize&family=Outfit:wght@500&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Electrolize&family=Rubik:wght@300..900&display=swap" rel="stylesheet">
         <link rel="apple-touch-icon" sizes="180x180" href="public/apple-touch-icon.png">
         <link rel="icon" type="image/png" sizes="32x32" href="public/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="16x16" href="public/favicon-16x16.png">
     </head>
     <body>
-        <div id="first">
-            <div id="left">
-                <h2>You love...</h2>
-                <div id="loves">
-                    <img class="love" id="img0" src="https://i.scdn.co/image/ab67616d00001e026f32c34a2056758870bd8dca" alt="images">
-                    <img class="love" id="img1" src="https://i.scdn.co/image/ab67616d00001e02908280d9807127e185b71d56" alt="images">
-                    <img class="love" id="img2" src="https://i.scdn.co/image/ab67616d00001e02fa2a6a9c1e7fecb7b8d7b707" alt="images">
-                    <img class="love" id="img3" src="https://i.scdn.co/image/ab67616d00001e028940ac99f49e44f59e6f7fb3" alt="images">
-                    <img class="love" id="img4" src="https://i.scdn.co/image/ab67616d00001e02f81891d2e28007ef6b918acd" alt="images">
+        <div id="songs" class="section wide">
+            <h2>Your top songs</h2>
+            <div class="list">
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e026f32c34a2056758870bd8dca" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">Twenties Ever After</span> </br> Bren Joy</p></div>
                 </div>
-            </div>
-            <div id="right">
-                <h2 id="yea">So you'll LOVE</h2>
-                <div id="buttons">
-                    <div data-id=0 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
-                        <div class="genre">raga rock</div>
-                        <div class="play"><div class="play-button"></div></div>
-                    </div>
-                    <div data-id=1 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
-                        <div class="genre">pop violin</div>
-                        <div class="play"><div class="play-button"></div></div>
-                    </div>
-                    <div data-id=2 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
-                        <div class="genre">experimental</div>
-                        <div class="play"><div class="play-button"></div></div>
-                    </div>
-                    <div data-id=3 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
-                        <div class="genre">ghanian jazz fusion</div>
-                        <div class="play"><div class="play-button"></div></div>
-                    </div>
-                    <div data-id=4 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
-                        <div class="genre">raga rock rockrockrockrockrock rockrock rock</div>
-                        <div class="play"><div class="play-button"></div></div>
-                    </div>
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e02908280d9807127e185b71d56" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">After the Love Has Gone</span> </br> Earth, Wind & Fire & Earth Again</p></div>
+                </div>
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e02fa2a6a9c1e7fecb7b8d7b707" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">Love on the Weekend</span> </br> John Mayer</p></div>
+                </div>
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e028940ac99f49e44f59e6f7fb3" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">Love on the Brain</span> </br> Rihanna</p></div>
+                </div>
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e02f81891d2e28007ef6b918acd" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">Love Story</span> </br> Taylor Swift</p></div>
                 </div>
             </div>
         </div>
-        <div id="second">
-            <div id="content">
-                <h2>How basic are you?</h2>
-                <h1>67%</h1>
-                <p>Average (Taylor's Version)</p>
-                <div id="faves">
-                    <h2>Your favourite not-so-popular...</h2>
-                    <div id="idk">
-                        <div class="box" id="song">
-                            <h2>Song</h2>
-                            <div>
-                                <img src="https://i.scdn.co/image/ab67616d00001e02f81891d2e28007ef6b918acd" alt="images" />
-                                <p>After the Love Has Gone</p> 
-                            </div>
-                        </div>
-                        <div class="box" id="artist">
-                            <h2>Artist</h2>
-                            <div>
-                                <img src="https://i.scdn.co/image/ab67616d00001e02f81891d2e28007ef6b918acd" alt="images" />
-                                <p>Taylor Swift</p> 
-                            </div>
-                        </div>
-                    </div>
+        <div id="artists" class="section wide">
+            <h2>Your top artists</h2>
+            <div class="list">
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e026f32c34a2056758870bd8dca" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">Bren Joy</p></div>
                 </div>
-                <div id="footer">
-                    <p>&#169; 2024 <a href="https://daneee.com/me">Dane Bagaoisan</a></p>
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e02908280d9807127e185b71d56" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">Earth</p></div>
+                </div>
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e02fa2a6a9c1e7fecb7b8d7b707" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">John Mayer</p></div>
+                </div>
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e028940ac99f49e44f59e6f7fb3" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">Rihanna</p></div>
+                </div>
+                <div class="item">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e02f81891d2e28007ef6b918acd" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">Taylor Swift</p></div>
                 </div>
             </div>
+        </div>
+        <div class="section" id="love">
+            <h2>You love</h2>
+            <div class="fixed">
+                <div data-id=0 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">raga rock</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+                <div data-id=1 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">pop violin</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+                <div data-id=2 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">experimental</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+                <div data-id=3 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">ghanian jazz fusion</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+                <div data-id=4 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">raga rock rockrockrockrockrock rockrock rock</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+            </div>
+        </div>
+        <div class="section" id="loves">
+            <h2>So you'll LOVE</h2>
+            <div class="fixed">
+                <div data-id=5 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">raga rock</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+                <div data-id=6 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">pop violin</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+                <div data-id=7 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">experimental</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+                <div data-id=8 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">ghanian jazz</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+                <div data-id=9 data-url="https://p.scdn.co/mp3-preview/c24bead39dd37569793e7593914b1e81e2b6b539?cid=5173a629a969480e800d210ffc569fae" class="button">
+                    <div class="genre">raga rock</div>
+                    <div class="play"><div class="play-button"></div></div>
+                </div>
+            </div>
+        </div>
+        <div id="basic" class="section">
+            <h2>How basic are you</h2>
+            <div class="fixed">
+                <h1>67.54%</h1>
+                <p>Average (Taylor's Version)</p>
+            </div>
+        </div>
+        <div id="faves" class="section">
+            <h2>Your favourite not-so-popular...</h2>
+            <div class="list">
+                <h3>Song</h3>
+                <div class="item" id="song">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e02908280d9807127e185b71d56" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">After the Love Has Gone</span> </br> Earth, Wind & Fire</p></div>
+                </div>
+                <h3>Artist</h3>
+                <div class="item" id="artist">
+                    <div class="item-img"><img src="https://i.scdn.co/image/ab67616d00001e02908280d9807127e185b71d56" alt="images"></div>
+                    <div class="item-desc"><p><span class="title">After the Love Has Gone</span> </br> Earth, Wind & Fire</p></div>
+                </div>
+            </div>
+        </div>
+        <div id="footer">
+            <p>Signed, sealed, delivered by <a href="https://www.daneee.com" target="_blank">Dane Bagaoisan</a></p>
         </div>
     </body>
 </html>
-<link rel="stylesheet" href="public/css/yours.css">
-<script src="public/js/yours.js"></script>
+<link rel="stylesheet" href="css/yours.css">
+<script src="js/yours.js"></script>

@@ -20,7 +20,7 @@ app.use(express.static('public'))
         contentSecurityPolicy: {
             useDefaults: true,
             directives: {
-                "img-src": ["'self'", "https://i.scdn.co/image/", "https://daneeee.blob.core.windows.net/images/noimage.jpg"],
+                "img-src": ["'self'", "https://i.scdn.co/image/", "https://storage.googleapis.com/daneee.com/no_img.jpg"],
                 "media-src": ["'self'", "https://p.scdn.co/mp3-preview/"]
             }
         }
@@ -32,14 +32,14 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:' + PORT + '/callback';
 const STATE_KEY = 'spotify_auth_state';
 const LIMIT = 50;
-const NO_IMG = "https://daneeee.blob.core.windows.net/images/noimage.jpg";
+const NO_IMG = "https://storage.googleapis.com/daneee.com/no_img.jpg";
 const genreMap = new Map();
 let client_token;
 
 fs.createReadStream('genres.csv')
     .pipe(csv())
     .on('data', data => {
-        genreMap.set(data.genre, [csvTrim(data.opps), JSON.parse(data.weights), csvTrim(data.links)]);
+        genreMap.set(data.genre, [data.url, csvTrim(data.opp_genres), JSON.parse(data.opp_weights), csvTrim(data.opp_urls)]);
     }).on('end', () => console.log('genres loaded'));
 
 getClientToken();
@@ -116,7 +116,8 @@ app.get('/callback', (req, res) => {
 
             const genreWeights = new Map(); // Genre weightage
             const artistGenres = new Map(); // Genres associated with each artist
-            const imgs = [];
+            const trackData = []
+            const artistData = [];
 
             let totalPopularity = 0;
             let minPopTrack = 101;
@@ -126,14 +127,20 @@ app.get('/callback', (req, res) => {
 
             // Assigns weightage to genres of top artists
             for (let i = 0; i < numOfArtists; i++) {
-                if (artists[i].popularity < minPopArtist) {
-                    minPopArtist = artists[i].popularity;
-                    minPopArtistId = artists[i];
+                const artist = artists[i];
+
+                if (artist.popularity < minPopArtist) {
+                    minPopArtist = artist.popularity;
+                    minPopArtistId = artist;
                 }
 
-                artistGenres.set(artists[i].id, artists[i].genres);
+                if (i < 5) {
+                    artistData.push({'img': getArtistImage(artist), 'artist': artist.name});
+                }
 
-                for (const genre of artists[i].genres) {
+                artistGenres.set(artist.id, artist.genres);
+
+                for (const genre of artist.genres) {
                     if (genreWeights.has(genre)) {
                         genreWeights.set(genre, genreWeights.get(genre) + Math.log(numOfArtists - i));
                     } else {
@@ -149,8 +156,8 @@ app.get('/callback', (req, res) => {
                 totalPopularity += track.popularity;
 
                 // Gets album covers of the user's top 5 tracks
-                if (i < 6) {
-                    imgs.push(getAlbumImage(track));
+                if (i < 5) {
+                    trackData.push({'img': getAlbumImage(track), 'title': track.name, 'artist': track.artists.length > 0 ? track.artists[0].name : 'Unknown'});
                 }
 
                 // Gets user's least popular favourite track
@@ -178,6 +185,15 @@ app.get('/callback', (req, res) => {
                     }
                 }
             }
+
+            // Get top 5 genres from genreWeights
+            const topGenreData = [];
+            const topGenres = Array.from(genreWeights.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            for (const genre of topGenres) {
+                if (genreMap.has(genre[0])) {
+                    topGenreData.push({ "genre": genre[0], "url": 'https://p.scdn.co/mp3-preview/' + genreMap.get(genre[0])[0] });
+                }
+            }
             
             // Assigns weightage to their corresponding genres
             const opps = new Map();
@@ -189,17 +205,17 @@ app.get('/callback', (req, res) => {
                 if (genreMap.has(key)) {
                     const genreData = genreMap.get(key);
 
-                    for (i = 0; i < genreData[0].length; i++) {
-                        const genre = genreData[0][i];
+                    for (i = 0; i < genreData[1].length; i++) {
+                        const genre = genreData[1][i];
 
                         if (opps.has(genre)) {
                             const oppItem = opps.get(genre);
-                            oppItem.weight += genreData[1][i] * value;
+                            oppItem.weight += genreData[2][i] * value;
                         } else {
                             opps.set(genre, {
                                 genre: genre,
-                                weight: genreData[1][i] * value,
-                                url: 'https://p.scdn.co/mp3-preview/' + genreData[2][i]
+                                weight: genreData[2][i] * value,
+                                url: 'https://p.scdn.co/mp3-preview/' + genreData[3][i]
                             });
                         }
                     }
@@ -207,12 +223,15 @@ app.get('/callback', (req, res) => {
             }
 
             return res.render('yours', { 
-                loves: imgs, 
-                hates: Array.from(opps.values()).sort((a, b) => b.weight - a.weight).slice(0, 6),
+                songs: trackData,
+                artists: artistData,
+                loves: topGenreData,
+                hates: Array.from(opps.values()).sort((a, b) => b.weight - a.weight).slice(0, 5),
                 score: totalPopularity / numOfTracks,
                 desc: getBasic(totalPopularity / numOfTracks),
                 trackUrl: getAlbumImage(minPopTrackId),
-                trackName: Object.hasOwn(minPopTrackId, 'name') ? minPopTrackId.name : 'Unknown',
+                trackTitle: Object.hasOwn(minPopTrackId, 'name') ? minPopTrackId.name : 'Unknown',
+                trackArtist: Object.hasOwn(minPopTrackId, 'artists') ? minPopTrackId.artists[0].name : 'Unknown',
                 artistUrl: getArtistImage(minPopArtistId),
                 artistName: Object.hasOwn(minPopArtistId, 'name') ? minPopArtistId.name : 'Unknown'
             });
@@ -247,7 +266,7 @@ const csvTrim = genreString => {
     const arr = genreString.slice(1,-1).split(',');
 
     for (i = 0; i < arr.length; i++) {
-        arr[i] = arr[i].slice(1,-1);
+        arr[i] = arr[i].trim().slice(1,-1);
     }
 
     return arr;
@@ -257,13 +276,13 @@ const csvTrim = genreString => {
 // Gets the user's basic description based on their average song popularity
 const getBasic = score => {
     if (score >=  80) {
-        return "White girl";
+        return "Swiftie 💁‍♀️💅✨";
     } else if (score >= 60) {
-        return "Average";
+        return "Pretty ✨b a s i c✨";
     } else if (score >= 40) {
-        return "Indie kid";
+        return "About Average";
     } else if (score >= 20) {
-        return "You are special and that's ok";
+        return "Indie Kid";
     } else {
         return "Apologies for interrupting your grindset";
     }
