@@ -60,10 +60,6 @@ app.get('/', (req, res) => {
 	res.sendFile(__dirname + '/hey.html');
 });
 
-app.get('/yours', (req, res) => {
-    res.sendFile(__dirname + '/yours.html');
-});
-
 app.get('/login', (req, res) => {
     const state = generateRandomString(16);
     res.cookie(STATE_KEY, state);
