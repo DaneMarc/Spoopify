@@ -35,7 +35,7 @@ const LIMIT = 50;
 const EMBED_DIM = 50;
 const NO_IMG = "https://storage.googleapis.com/daneee.com/no_img.jpg";
 const genreMap = new Map();
-let client_token;
+// let client_token;
 
 fs.createReadStream('genres.csv')
     .pipe(csv())
@@ -48,9 +48,6 @@ let horoEmbeds = JSON.parse(fs.readFileSync('horoscope_embeddings.json'));
 genreEmbeds = new Map(Object.entries(genreEmbeds));
 horoEmbeds = new Map(Object.entries(horoEmbeds));
 console.log("embeddings loaded");
-
-getClientToken();
-setInterval(getClientToken, 3600000);
 
 app.listen(process.env.PORT || PORT, () => {
 	console.log(`Server listening on port ${PORT}`);
@@ -119,7 +116,6 @@ app.get('/callback', (req, res) => {
             const artists = userData[1].data.items;
             const numOfTracks = tracks.length;
             const numOfArtists = artists.length;
-            //const BIG_WEIGHT = numOfTracks * 2;
 
             const genreWeights = new Map(); // Genre weightage
             const artistGenres = new Map(); // Genres associated with each artist
@@ -195,15 +191,15 @@ app.get('/callback', (req, res) => {
 
             // Get top 5 genres from genreWeights
             const topGenreData = [];
-            const topGenres = Array.from(genreWeights.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
-            for (const genre of topGenres) {
+            const topGenres = Array.from(genreWeights.entries()).sort((a, b) => b[1] - a[1]);
+            for (const genre of topGenres.slice(0, 5)) {
                 if (genreMap.has(genre[0])) {
                     topGenreData.push({ "genre": genre[0], "url": 'https://p.scdn.co/mp3-preview/' + genreMap.get(genre[0])[0] });
                 }
             }
 
             // Get user's horoscope
-            const horoscope = getHoroscope(genreWeights);
+            const horoscope = getHoroscope(topGenres.slice(0, 10));
             
             // Assigns weightage to their corresponding genres
             const opps = new Map();
@@ -304,20 +300,21 @@ const getHoroscope = genreWeights => {
     let totalGenreEmbed = new Array(EMBED_DIM);
     for (let i = 0; i < EMBED_DIM; ++i) totalGenreEmbed[i] = 0;
 
-    for (const [key, value] of genreWeights.entries()) {
+    for (const [key, value] of genreWeights) {
+        // console.log(key + ": " + value);
         if (genreEmbeds.has(key)) {
             for (let i = 0; i < EMBED_DIM; i++) {
-                totalGenreEmbed[i] += genreEmbeds.get(key)[i] * value
+                totalGenreEmbed[i] += genreEmbeds.get(key)[i] // * value; // value is the weight of the genre
             }
         }
     }
 
-    let avgGenreEmbed = totalGenreEmbed.map(x => x / genreWeights.size);
     let max = -1;
     let horo = "";
 
     for (const [key, value] of horoEmbeds.entries()) {
-        similarity = cosineSimilarity(avgGenreEmbed, value)
+        similarity = cosineSimilarity(totalGenreEmbed, value)
+        // console.log(key + ": " + similarity);
         if (similarity > max) {
             max = similarity
             horo = key
@@ -328,10 +325,6 @@ const getHoroscope = genreWeights => {
 }
 
 const cosineSimilarity = (arr1, arr2) => {
-    if (arr1.length !== arr2.length) {
-        throw new Error('Arrays must have the same length');
-    }
-
     let dotProduct = 0;
     let magnitude1 = 0;
     let magnitude2 = 0;
@@ -342,10 +335,7 @@ const cosineSimilarity = (arr1, arr2) => {
         magnitude2 += arr2[i] ** 2;
     }
 
-    magnitude1 = Math.sqrt(magnitude1);
-    magnitude2 = Math.sqrt(magnitude2);
-
-    return dotProduct / (magnitude1 * magnitude2);
+    return dotProduct / (Math.sqrt(magnitude1) * Math.sqrt(magnitude2));
 };
 
 const getHoroEmoji = sign => {
@@ -381,17 +371,17 @@ const getHoroEmoji = sign => {
 
 // Retrieves a client token if one is not found/expired
 // Allows the server to access song and artist data
-function getClientToken() {
-    axios.post('https://accounts.spotify.com/api/token',
-        new URLSearchParams({
-            grant_type: 'client_credentials'
-        }).toString(),
-        { headers: { 'Authorization': 'Basic ' + Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64') }}
-    ).then(body => {
-        client_token = body.data.access_token;
-        console.log('client token retrieved');
-    }).catch(err => console.log(err));
-}
+// function getClientToken() {
+//     axios.post('https://accounts.spotify.com/api/token',
+//         new URLSearchParams({
+//             grant_type: 'client_credentials'
+//         }).toString(),
+//         { headers: { 'Authorization': 'Basic ' + Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64') }}
+//     ).then(body => {
+//         client_token = body.data.access_token;
+//         console.log('client token retrieved');
+//     }).catch(err => console.log(err));
+// }
 
 const getAlbumImage = track => {
     if (track != null && Object.hasOwn(track, 'album') && Object.hasOwn(track.album, 'images') && track.album.images.length > 0) {
