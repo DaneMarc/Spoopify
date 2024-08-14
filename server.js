@@ -34,20 +34,9 @@ const STATE_KEY = 'spotify_auth_state';
 const LIMIT = 50;
 const EMBED_DIM = 50;
 const NO_IMG = "https://storage.googleapis.com/daneee.com/no_img.jpg";
+
 const genreMap = new Map();
-// let client_token;
-
-fs.createReadStream('genres.csv')
-    .pipe(csv())
-    .on('data', data => {
-        genreMap.set(data.genre, [data.url, csvTrim(data.opp_genres), JSON.parse(data.opp_weights), csvTrim(data.opp_urls)]);
-    }).on('end', () => console.log('genres loaded'));
-
-let genreEmbeds = JSON.parse(fs.readFileSync('genre_embeddings.json'));
-let horoEmbeds = JSON.parse(fs.readFileSync('horoscope_embeddings.json'));
-genreEmbeds = new Map(Object.entries(genreEmbeds));
-horoEmbeds = new Map(Object.entries(horoEmbeds));
-console.log("embeddings loaded");
+let genreEmbeds, horoEmbeds;
 
 app.listen(process.env.PORT || PORT, () => {
 	console.log(`Server listening on port ${PORT}`);
@@ -58,6 +47,16 @@ app.get('/', (req, res) => {
 });
 
 app.get('/login', (req, res) => {
+    fs.createReadStream('genres.csv')
+        .pipe(csv())
+        .on('data', data => {
+            genreMap.set(data.genre, [data.url, csvTrim(data.opp_genres), JSON.parse(data.opp_weights), csvTrim(data.opp_urls)]);
+        })
+        .on('end', () => console.log('genres loaded'));
+    genreEmbeds = new Map(Object.entries(JSON.parse(fs.readFileSync('genre_embeddings.json'))));
+    horoEmbeds = new Map(Object.entries(JSON.parse(fs.readFileSync('horoscope_embeddings.json'))));
+    console.log("embeddings loaded");
+
     const state = generateRandomString(16);
     res.cookie(STATE_KEY, state);
     res.redirect('https://accounts.spotify.com/authorize?' + new URLSearchParams({
@@ -280,22 +279,6 @@ const csvTrim = genreString => {
     return arr;
 }
 
-
-// Gets the user's basic description based on their average song popularity
-const getBasic = score => {
-    if (score >=  80) {
-        return "Swiftie 💁‍♀️💅✨";
-    } else if (score >= 60) {
-        return "Pretty ✨b a s i c✨";
-    } else if (score >= 40) {
-        return "About Average";
-    } else if (score >= 20) {
-        return "Indie Kid";
-    } else {
-        return "Apologies for interrupting your grindset";
-    }
-}
-
 const getHoroscope = genreWeights => {
     let totalGenreEmbed = new Array(EMBED_DIM);
     for (let i = 0; i < EMBED_DIM; ++i) totalGenreEmbed[i] = 0;
@@ -338,6 +321,30 @@ const cosineSimilarity = (arr1, arr2) => {
     return dotProduct / (Math.sqrt(magnitude1) * Math.sqrt(magnitude2));
 };
 
+const getAlbumImage = track => {
+    if (track != null && Object.hasOwn(track, 'album') && Object.hasOwn(track.album, 'images') && track.album.images.length > 0) {
+        if (track.album.images.length > 1) {
+            return track.album.images[1].url;
+        } else {
+            return track.album.images[0].url;
+        }
+    } else {
+        return NO_IMG;
+    }
+}
+
+const getArtistImage = artist => {
+    if (artist != null && Object.hasOwn(artist, 'images') && artist.images.length > 0) {
+        if (artist.images.length == 1) {
+            return artist.images[0].url;
+        } else {
+            return artist.images[1].url;
+        }
+    } else {
+        return NO_IMG;
+    }
+}
+
 const getHoroEmoji = sign => {
     switch (sign) {
         case 'Aries':
@@ -369,40 +376,17 @@ const getHoroEmoji = sign => {
     }
 }
 
-// Retrieves a client token if one is not found/expired
-// Allows the server to access song and artist data
-// function getClientToken() {
-//     axios.post('https://accounts.spotify.com/api/token',
-//         new URLSearchParams({
-//             grant_type: 'client_credentials'
-//         }).toString(),
-//         { headers: { 'Authorization': 'Basic ' + Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64') }}
-//     ).then(body => {
-//         client_token = body.data.access_token;
-//         console.log('client token retrieved');
-//     }).catch(err => console.log(err));
-// }
-
-const getAlbumImage = track => {
-    if (track != null && Object.hasOwn(track, 'album') && Object.hasOwn(track.album, 'images') && track.album.images.length > 0) {
-        if (track.album.images.length > 1) {
-            return track.album.images[1].url;
-        } else {
-            return track.album.images[0].url;
-        }
+// Gets the user's basic description based on their average song popularity
+const getBasic = score => {
+    if (score >=  80) {
+        return "Swiftie 💁‍♀️💅✨";
+    } else if (score >= 60) {
+        return "Pretty ✨b a s i c✨";
+    } else if (score >= 40) {
+        return "About Average";
+    } else if (score >= 20) {
+        return "Indie Kid";
     } else {
-        return NO_IMG;
-    }
-}
-
-const getArtistImage = artist => {
-    if (artist != null && Object.hasOwn(artist, 'images') && artist.images.length > 0) {
-        if (artist.images.length == 1) {
-            return artist.images[0].url;
-        } else {
-            return artist.images[1].url;
-        }
-    } else {
-        return NO_IMG;
+        return "Apologies for interrupting your grindset";
     }
 }
