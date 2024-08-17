@@ -90,7 +90,10 @@ app.get('/callback', (req, res) => {
             redirect_uri: REDIRECT_URI,
             grant_type: 'authorization_code'
         }).toString(), {
-            headers: {'Authorization': 'Basic ' + Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64')}
+            headers: {
+                'content-type': 'application/x-www-form-urlencoded',
+                'Authorization': 'Basic ' + Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64')
+            }
         }
     ).then(body => {
         if (body.status !== 200) {
@@ -99,7 +102,10 @@ app.get('/callback', (req, res) => {
         }
         console.log(body.data.access_token);
         console.log(body.data.token_type);
+        console.log(body.data.scope);
         console.log(body.data.expires_in);
+        console.log(body.data.refresh_token);
+        
         //console.log('token retrieved: ' + body.data.access_token);
         const access_token = body.data.access_token;
         const params = new URLSearchParams({'limit': LIMIT, time_range: 'long_term'}).toString();
