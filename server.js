@@ -93,8 +93,9 @@ app.get('/callback', (req, res) => {
             console.log('invalid token');
             return res.redirect('/#error=invalid_token');
         }
-        console.log('token retrieved');
+        console.log('token retrieved: ' + body.data.access_token);
         const access_token = body.data.access_token;
+        console.log(access_token);
         const params = new URLSearchParams({'limit': LIMIT, time_range: 'long_term'}).toString();
         const userHeaders = { 
             headers: {
