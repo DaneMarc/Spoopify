@@ -59,13 +59,15 @@ app.get('/login', (req, res) => {
 
     const state = generateRandomString(16);
     res.cookie(STATE_KEY, state);
-    res.redirect('https://accounts.spotify.com/authorize?' + new URLSearchParams({
+    const uri = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
         response_type: 'code',
         client_id: CLIENT_ID,
         scope: 'user-top-read',
         redirect_uri: REDIRECT_URI,
         state: state
-    }).toString());
+    }).toString();
+    console.log(uri);
+    res.redirect(uri);
 });
 
 app.get('/callback', (req, res) => {
@@ -77,6 +79,8 @@ app.get('/callback', (req, res) => {
         return res.redirect('/#error=state_mismatch');
     }
 
+    console.log(code);
+    console.log(Buffer.from(CLIENT_ID + ':' + CLIENT_SECRET).toString('base64'));
     res.clearCookie(STATE_KEY);
 
     // Gets user token
@@ -93,9 +97,11 @@ app.get('/callback', (req, res) => {
             console.log('invalid token');
             return res.redirect('/#error=invalid_token');
         }
-        console.log('token retrieved: ' + body.data.access_token);
+        console.log(body.data.access_token);
+        console.log(body.data.token_type);
+        console.log(body.data.expires_in);
+        //console.log('token retrieved: ' + body.data.access_token);
         const access_token = body.data.access_token;
-        console.log(access_token);
         const params = new URLSearchParams({'limit': LIMIT, time_range: 'long_term'}).toString();
         const userHeaders = { 
             headers: {
@@ -104,6 +110,8 @@ app.get('/callback', (req, res) => {
                 'Content-Type': 'application/json'
             }
         };
+        console.log(params);
+        console.log(userHeaders);
         
         // Gets user's top artists and tracks
         Promise.all([axios.get('https://api.spotify.com/v1/me/top/tracks?' + params, userHeaders),
